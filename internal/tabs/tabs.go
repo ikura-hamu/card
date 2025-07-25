@@ -8,21 +8,31 @@ import (
 	"go.ikura-hamu.work/card/internal/common/merrors"
 )
 
+type Tab interface {
+	tea.Model
+	Name() string
+}
+
 type TabsManager struct {
 	tabNames  []string
 	activeTab int
-	tabs      []tea.Model
+	tabs      []Tab
 }
 
-func NewTabsManager(tabNames []string, tabs []tea.Model) TabsManager {
-	if len(tabNames) != len(tabs) {
-		panic("number of tab names must match number of tabs")
+func NewTabsManager(tabs []Tab) (TabsManager, error) {
+	if len(tabs) == 0 {
+		return TabsManager{}, fmt.Errorf("at least one tab is required")
+	}
+
+	tabNames := make([]string, len(tabs))
+	for i, tab := range tabs {
+		tabNames[i] = tab.Name()
 	}
 	return TabsManager{
 		tabNames:  tabNames,
 		activeTab: 0,
 		tabs:      tabs,
-	}
+	}, nil
 }
 
 func (tm TabsManager) Init() tea.Cmd {
@@ -62,7 +72,11 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	for i, tab := range tm.tabs {
 		tab, cmd := tab.Update(msg)
 		cmds = append(cmds, cmd)
-		tm.tabs[i] = tab
+		if tab, ok := tab.(Tab); ok {
+			tm.tabs[i] = tab
+		} else {
+			return tm, tea.Quit // If a tab is not a valid Tab type, exit
+		}
 	}
 	return tm, tea.Batch(cmds...)
 }

@@ -89,6 +89,10 @@ func NewModel() Model {
 	}
 }
 
+func (m Model) Name() string {
+	return "Repositories"
+}
+
 func (m Model) Init() tea.Cmd {
 	return fetchRepositories
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"go.ikura-hamu.work/card/internal/about"
 	"go.ikura-hamu.work/card/internal/repo"
@@ -8,12 +10,15 @@ import (
 )
 
 func main() {
-	model := tabs.NewTabsManager([]string{"About", "Repositories"}, []tea.Model{
+	model, err := tabs.NewTabsManager([]tabs.Tab{
 		about.NewModel(),
 		repo.NewModel(),
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
