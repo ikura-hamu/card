@@ -120,11 +120,11 @@ Language: %s
 		m.reposViewport.SetContent(md)
 	case tea.WindowSizeMsg:
 		if !m.ready {
-			m.reposViewport = viewport.New(msg.Width-5, msg.Height-5)
+			m.reposViewport = viewport.New(msg.Width, msg.Height)
 			m.ready = true
 		} else {
-			m.reposViewport.Width = msg.Width - 5
-			m.reposViewport.Height = msg.Height - 5
+			m.reposViewport.Width = msg.Width
+			m.reposViewport.Height = msg.Height
 		}
 	case merrors.Msg:
 		return m, tea.Quit // Handle error appropriately in a real application

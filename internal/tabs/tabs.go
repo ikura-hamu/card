@@ -69,6 +69,28 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return tm, tea.Quit
 	}
 
+	// WindowSizeMsg を受け取った場合、コンテンツエリアのサイズを計算して渡す
+	if msg, ok := msg.(tea.WindowSizeMsg); ok {
+		contentWidth, contentHeight := tm.calculateContentSize(msg.Width, msg.Height)
+		contentSizeMsg := tea.WindowSizeMsg{
+			Width:  contentWidth,
+			Height: contentHeight,
+		}
+
+		cmds := make([]tea.Cmd, 0, len(tm.tabs))
+		for i, tab := range tm.tabs {
+			tab, cmd := tab.Update(contentSizeMsg)
+			cmds = append(cmds, cmd)
+			if tab, ok := tab.(Tab); ok {
+				tm.tabs[i] = tab
+			} else {
+				return tm, tea.Quit
+			}
+		}
+
+		return tm, tea.Batch(cmds...)
+	}
+
 	// キーボードのイベントはactive tabにのみ送信
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		tab, cmd := tm.tabs[tm.activeTab].Update(msg)
@@ -94,9 +116,7 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return tm, tea.Batch(cmds...)
 }
 
-func (tm TabsManager) View() string {
-	var view string
-
+func (tm TabsManager) renderTabHeaders() string {
 	tabHeaders := make([]string, 0, len(tm.tabs))
 	for i, name := range tm.tabNames {
 		if i == tm.activeTab {
@@ -108,7 +128,39 @@ func (tm TabsManager) View() string {
 
 	tabHeader := tabHeaderStyle.Render(lipgloss.JoinHorizontal(lipgloss.Top, tabHeaders...)) + "\n"
 
-	view += tabHeader
+	return tabHeader
+}
+
+// calculateContentSize calculates the available content area size
+func (tm TabsManager) calculateContentSize(terminalWidth, terminalHeight int) (width int, height int) {
+	// タブヘッダーのサンプルを作成してサイズを測定
+	sampleTabHeader := tm.renderTabHeaders()
+	tabHeaderHeight := lipgloss.Height(sampleTabHeader)
+
+	// コンテンツスタイルのボーダーとパディングを考慮
+	contentSample := contentStyle.Render("sample")
+	contentBorderWidth := lipgloss.Width(contentSample) - lipgloss.Width("sample")
+	contentBorderHeight := lipgloss.Height(contentSample) - lipgloss.Height("sample")
+
+	// 利用可能なコンテンツエリアのサイズを計算
+	contentWidth := terminalWidth - contentBorderWidth
+	contentHeight := terminalHeight - tabHeaderHeight - contentBorderHeight
+
+	// 最小サイズを確保
+	if contentWidth < 1 {
+		contentWidth = 1
+	}
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+
+	return contentWidth, contentHeight
+}
+
+func (tm TabsManager) View() string {
+	var view string
+
+	view += tm.renderTabHeaders()
 	view += contentStyle.Render(tm.tabs[tm.activeTab].View())
 
 	return view
