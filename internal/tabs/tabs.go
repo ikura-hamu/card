@@ -68,6 +68,17 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return tm, tea.Quit
 	}
 
+	// キーボードのイベントはactive tabにのみ送信
+	if msg, ok := msg.(tea.KeyMsg); ok {
+		tab, cmd := tm.tabs[tm.activeTab].Update(msg)
+		if tab, ok := tab.(Tab); ok {
+			tm.tabs[tm.activeTab] = tab
+		} else {
+			return tm, tea.Quit // If a tab is not a valid Tab type, exit
+		}
+		return tm, cmd
+	}
+
 	cmds := make([]tea.Cmd, 0, len(tm.tabs))
 	for i, tab := range tm.tabs {
 		tab, cmd := tab.Update(msg)
