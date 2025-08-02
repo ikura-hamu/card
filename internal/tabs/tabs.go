@@ -5,6 +5,7 @@ import (
 	"log"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"go.ikura-hamu.work/card/internal/common/merrors"
 )
 
@@ -89,13 +90,53 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return tm, tea.Quit // If a tab is not a valid Tab type, exit
 		}
 	}
+
 	return tm, tea.Batch(cmds...)
 }
 
 func (tm TabsManager) View() string {
 	var view string
-	view += fmt.Sprintf("current tab: %s\n", tm.tabNames[tm.activeTab])
-	view += tm.tabs[tm.activeTab].View() + "\n"
+
+	tabHeaders := make([]string, 0, len(tm.tabs))
+	for i, name := range tm.tabNames {
+		if i == tm.activeTab {
+			tabHeaders = append(tabHeaders, activeTabStyle.Render(fmt.Sprintf(" %s ", name)))
+		} else {
+			tabHeaders = append(tabHeaders, inactiveTabStyle.Render(fmt.Sprintf(" %s ", name)))
+		}
+	}
+
+	tabHeader := tabHeaderStyle.Render(lipgloss.JoinHorizontal(lipgloss.Top, tabHeaders...)) + "\n"
+
+	view += tabHeader
+	view += contentStyle.Render(tm.tabs[tm.activeTab].View())
 
 	return view
 }
+
+var (
+	activeTabStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder(), true, true, false, true).
+			BorderForeground(lipgloss.Color("205")).
+			Bold(true).
+			Padding(0, 1).
+			Background(lipgloss.Color("240")).
+			Foreground(lipgloss.Color("white")).
+			Margin(0, 1).
+			Align(lipgloss.Center)
+	inactiveTabStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder(), true, true, false, true).
+				BorderForeground(lipgloss.Color("240")).
+				Background(lipgloss.Color("white")).
+				Foreground(lipgloss.Color("black")).
+				Margin(0, 1).
+				Align(lipgloss.Center)
+	tabHeaderStyle = lipgloss.NewStyle().
+			Margin(0, 1)
+	contentStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("240")).
+			Background(lipgloss.Color("white")).
+			Foreground(lipgloss.Color("black")).
+			Align(lipgloss.Left)
+)

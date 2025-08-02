@@ -64,11 +64,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.mdViewport.SetContent(md)
 	case tea.WindowSizeMsg:
 		if !m.ready {
-			m.mdViewport = viewport.New(msg.Width, msg.Height-2)
+			m.mdViewport = viewport.New(msg.Width-5, msg.Height-5)
 			m.ready = true
 		} else {
-			m.mdViewport.Width = msg.Width
-			m.mdViewport.Height = msg.Height - 2
+			m.mdViewport.Width = msg.Width - 5
+			m.mdViewport.Height = msg.Height - 5
 		}
 	case merrors.Msg:
 		return m, tea.Quit // Handle error appropriately in a real application
