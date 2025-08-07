@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -27,6 +28,10 @@ type reposMsg struct {
 	repos []repo
 }
 
+type reposRateLimitMsg struct {
+	resetAt time.Time
+}
+
 const githubUserName = "ikura-hamu"
 
 func fetchRepositories() tea.Msg {
@@ -34,6 +39,10 @@ func fetchRepositories() tea.Msg {
 	client := github.NewClient(http.DefaultClient)
 
 	user, _, err := client.Users.Get(ctx, githubUserName)
+	re := &github.RateLimitError{}
+	if rateLimit := errors.As(err, &re); rateLimit {
+		return reposRateLimitMsg{resetAt: re.Rate.Reset.Time}
+	}
 	if err != nil {
 		return merrors.New(fmt.Errorf("fetch user: %w", err))
 	}
@@ -45,6 +54,9 @@ func fetchRepositories() tea.Msg {
 			PerPage: user.GetPublicRepos(),
 		},
 	})
+	if rateLimit := errors.As(err, &re); rateLimit {
+		return reposRateLimitMsg{resetAt: re.Rate.Reset.Time}
+	}
 	if err != nil {
 		return merrors.New(fmt.Errorf("fetch repositories: %w", err))
 	}
@@ -114,6 +126,13 @@ Language: %s
 				r.name, r.desctiption, r.starsCount, r.language))
 		}
 		md, err := glamour.Render(contentBdr.String(), "dark")
+		if err != nil {
+			return m, tea.Quit
+		}
+		m.reposViewport.SetContent(md)
+	case reposRateLimitMsg:
+		content := fmt.Sprintf("Rate limit exceeded. Please wait until %s to try again.", msg.resetAt.Format(time.DateTime))
+		md, err := glamour.Render(content, "dark")
 		if err != nil {
 			return m, tea.Quit
 		}
