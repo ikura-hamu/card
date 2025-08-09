@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"go.ikura-hamu.work/card/internal/common/merrors"
+	"go.ikura-hamu.work/card/internal/common/size"
 )
 
 type Tab interface {
@@ -18,6 +19,8 @@ type TabsManager struct {
 	tabNames  []string
 	activeTab int
 	tabs      []Tab
+
+	size size.Size
 }
 
 func NewTabsManager(tabs []Tab) (TabsManager, error) {
@@ -50,7 +53,7 @@ func (tm TabsManager) Init() tea.Cmd {
 func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
 			return tm, tea.Quit
 		case "tab":
 			tm.activeTab++
@@ -76,6 +79,8 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Width:  contentWidth,
 			Height: contentHeight,
 		}
+
+		tm.size = size.Size{Width: contentWidth, Height: contentHeight}
 
 		cmds := make([]tea.Cmd, 0, len(tm.tabs))
 		for i, tab := range tm.tabs {
@@ -161,7 +166,8 @@ func (tm TabsManager) View() string {
 	var view string
 
 	view += tm.renderTabHeaders()
-	view += contentStyle.Render(tm.tabs[tm.activeTab].View())
+	view += contentStyle.Width(tm.size.Width).Height(tm.size.Height).
+		Render(tm.tabs[tm.activeTab].View())
 
 	return view
 }
