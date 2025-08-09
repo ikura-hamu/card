@@ -5,11 +5,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/cli/browser"
 	"go.ikura-hamu.work/card/internal/common/merrors"
 	"go.ikura-hamu.work/card/internal/common/size"
 )
@@ -21,6 +23,7 @@ type repo struct {
 	language    string
 	pushedAt    time.Time
 	topics      []string
+	url         string
 }
 
 var _ list.Item = repo{}
@@ -55,10 +58,28 @@ func (m Model) Init() tea.Cmd {
 	return fetchRepositories
 }
 
+func additionalListKeyBindings() []key.Binding {
+	return []key.Binding{
+		key.NewBinding(
+			key.WithKeys("o", tea.KeyEnter.String()),
+			key.WithHelp("o", "open in browser"),
+		),
+	}
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := make([]tea.Cmd, 0, 3)
 
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case tea.KeyEnter.String(), "o":
+			currentRepo := m.repoList.SelectedItem().(repo)
+			err := browser.OpenURL(currentRepo.url)
+			if err != nil {
+				return m, merrors.NewCmd(fmt.Errorf("open repository URL: %w", err))
+			}
+		}
 	case reposMsg:
 		items := make([]list.Item, 0, len(msg.repos))
 		for _, r := range msg.repos {
@@ -79,8 +100,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		mdTextViewSize := repoMDTextViewSize(m.size)
 		if !m.ready {
 			m.reposViewport = viewport.New(mdTextViewSize.Width, mdTextViewSize.Height)
+
 			m.repoList = list.New([]list.Item{}, list.NewDefaultDelegate(), listSize.Width, listSize.Height)
+			m.repoList.AdditionalFullHelpKeys = additionalListKeyBindings
+			m.repoList.AdditionalShortHelpKeys = additionalListKeyBindings
 			m.repoList.Title = "Repositories"
+
 			m.ready = true
 		} else {
 			m.reposViewport.Width = mdTextViewSize.Width
@@ -136,7 +161,12 @@ func (m Model) View() string {
 		return "Loading repositories..."
 	}
 
-	repoMD, err := repoMarkdownView(m.repoList.SelectedItem().(repo))
+	currentRepo, ok := m.repoList.SelectedItem().(repo)
+	if !ok {
+		return "No repository selected."
+	}
+
+	repoMD, err := repoMarkdownView(currentRepo)
 	if err != nil {
 		return fmt.Sprintf("Error rendering repository details: %v", err)
 	}

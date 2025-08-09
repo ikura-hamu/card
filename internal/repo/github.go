@@ -59,6 +59,7 @@ func fetchRepositories() tea.Msg {
 			language:    r.GetLanguage(),
 			pushedAt:    r.GetPushedAt().Time,
 			topics:      r.Topics,
+			url:         r.GetHTMLURL(),
 		})
 	}
 
