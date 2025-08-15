@@ -1,0 +1,53 @@
+name: "Notify"
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Check Go packages
+        shell: bash
+        run: |
+          {
+            echo 'GO_MOD_INFO=<<EOF'
+            echo $(go list -json=Module,Imports .)
+            echo EOF
+          } >> "$GITHUB_ENV"
+
+      - name: GitHub App token
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: "1786861"
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          repositories: "go.ikura-hamu.work"
+
+      - name: Repository Dispatch
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: 'ikura-hamu',
+              repo: 'go.ikura-hamu.work',
+              event_type: 'update',
+              client_payload: {
+                Owner: ${{ github.repository_owner }},
+                RepoName: ${{ github.event.repository.name }},
+                GoModInfo: ${{ env.GO_MOD_INFO }}
+              },
+              headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+              }
+            });
