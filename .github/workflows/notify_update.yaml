@@ -44,7 +44,7 @@ jobs:
               client_payload: {
                 Owner: '${{ github.repository_owner }}',
                 RepoName: '${{ github.event.repository.name }}',
-                GoModInfo: ${{ env.GO_MOD_INFO }}
+                GoModInfo: JSON.parse('${{ env.GO_MOD_INFO }}')
               },
               headers: {
                 'X-GitHub-Api-Version': '2022-11-28'
