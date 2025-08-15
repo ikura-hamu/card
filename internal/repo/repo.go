@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -105,6 +106,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.repoList.AdditionalFullHelpKeys = additionalListKeyBindings
 			m.repoList.AdditionalShortHelpKeys = additionalListKeyBindings
 			m.repoList.Title = "Repositories"
+			m.repoList.SetShowHelp(false)
 
 			m.ready = true
 		} else {
@@ -173,6 +175,14 @@ func (m Model) View() string {
 	return lipgloss.JoinHorizontal(lipgloss.Top,
 		listContainerStyle(repoListSize(m.size)).Render(m.repoList.View()),
 		mdContainerStyle.Render(m.reposViewport.View()))
+}
+
+func (m Model) KeyMap() help.KeyMap {
+	return m.repoList
+}
+
+func (m Model) Help() help.Model {
+	return m.repoList.Help
 }
 
 func listContainerStyle(cs size.Size) lipgloss.Style {

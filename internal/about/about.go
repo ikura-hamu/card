@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
@@ -88,4 +89,8 @@ func (m Model) View() string {
 		return "Loading readme..."
 	}
 	return m.mdViewport.View()
+}
+
+func (m Model) KeyMap() help.KeyMap {
+	return KeyMap(m.mdViewport.KeyMap)
 }

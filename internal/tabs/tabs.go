@@ -3,6 +3,8 @@ package tabs
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"go.ikura-hamu.work/card/internal/common/merrors"
@@ -12,12 +14,15 @@ import (
 type Tab interface {
 	tea.Model
 	Name() string
+	KeyMap() help.KeyMap
 }
 
 type TabsManager struct {
 	tabNames  []string
 	activeTab int
 	tabs      []Tab
+	help      help.Model
+	keyMap    tabsKeyMap
 
 	size size.Size
 }
@@ -35,6 +40,12 @@ func NewTabsManager(tabs []Tab) (TabsManager, error) {
 		tabNames:  tabNames,
 		activeTab: 0,
 		tabs:      tabs,
+		help:      help.New(),
+		keyMap: tabsKeyMap{
+			left:  key.NewBinding(key.WithKeys("tab", "right"), key.WithHelp("tab", "move left")),
+			right: key.NewBinding(key.WithKeys("shift+tab", "left"), key.WithHelp("shift+tab", "move right")),
+			quit:  key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "quit")),
+		},
 	}, nil
 }
 
@@ -49,20 +60,20 @@ func (tm TabsManager) Init() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+func (tm *TabsManager) changeActiveTab(idx int) {
+	tm.activeTab = idx
+	tm.keyMap.contentKeyMap = tm.tabs[tm.activeTab].KeyMap()
+}
+
 func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch msg.String() {
 		case "ctrl+c":
 			return tm, tea.Quit
 		case "tab":
-			tm.activeTab++
-			tm.activeTab %= len(tm.tabs)
+			tm.changeActiveTab((tm.activeTab + 1) % len(tm.tabs))
 		case "shift+tab":
-			tm.activeTab--
-			if tm.activeTab < 0 {
-				tm.activeTab += len(tm.tabs)
-			}
-			tm.activeTab %= len(tm.tabs)
+			tm.changeActiveTab((tm.activeTab - 1 + len(tm.tabs)) % len(tm.tabs))
 		}
 	}
 
@@ -79,6 +90,8 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Height: contentHeight,
 		}
 
+		tm.help.Width = contentWidth
+
 		tm.size = size.Size{Width: contentWidth, Height: contentHeight}
 
 		cmds := make([]tea.Cmd, 0, len(tm.tabs))
@@ -91,6 +104,8 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return tm, merrors.NewCmd(fmt.Errorf("tab is not a valid Tab type: %T", tab))
 			}
 		}
+
+		tm.changeActiveTab(tm.activeTab) // 起動時用に呼び出す
 
 		return tm, tea.Batch(cmds...)
 	}
@@ -141,6 +156,9 @@ func (tm TabsManager) calculateContentSize(terminalWidth, terminalHeight int) (w
 	sampleTabHeader := tm.renderTabHeaders()
 	tabHeaderHeight := lipgloss.Height(sampleTabHeader)
 
+	tabHelp := tm.renderHelp()
+	tabHelpHeight := lipgloss.Height(tabHelp)
+
 	// コンテンツスタイルのボーダーとパディングを考慮
 	contentSample := contentStyle.Render("sample")
 	contentBorderWidth := lipgloss.Width(contentSample) - lipgloss.Width("sample")
@@ -148,7 +166,7 @@ func (tm TabsManager) calculateContentSize(terminalWidth, terminalHeight int) (w
 
 	// 利用可能なコンテンツエリアのサイズを計算
 	contentWidth := terminalWidth - contentBorderWidth
-	contentHeight := terminalHeight - tabHeaderHeight - contentBorderHeight
+	contentHeight := terminalHeight - tabHeaderHeight - tabHelpHeight - contentBorderHeight
 
 	// 最小サイズを確保
 	if contentWidth < 1 {
@@ -167,6 +185,7 @@ func (tm TabsManager) View() string {
 	view += tm.renderTabHeaders()
 	view += contentStyle.Width(tm.size.Width).Height(tm.size.Height).
 		Render(tm.tabs[tm.activeTab].View())
+	view += "\n" + tm.renderHelp()
 
 	return view
 }

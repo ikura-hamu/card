@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
+	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
 	"go.ikura-hamu.work/card/internal/common/size"
 )
@@ -103,4 +104,8 @@ func CleanupTempIcons() {
 	for _, f := range matches {
 		_ = os.Remove(f)
 	}
+}
+
+func (m Model) KeyMap() help.KeyMap {
+	return nil
 }
