@@ -19,11 +19,9 @@ jobs:
       - name: Check Go packages
         shell: bash
         run: |
-          {
-            echo 'GO_MOD_INFO=<<EOF'
-            go list -json=Module,Imports .
-            echo 'EOF'
-          } >> "$GITHUB_ENV"
+          echo 'GO_MOD_INFO<<EOF' >> "$GITHUB_ENV"
+          go list -json=Module,Imports . >> "$GITHUB_ENV"
+          echo 'EOF' >> "$GITHUB_ENV"
 
       - name: GitHub App token
         uses: actions/create-github-app-token@v2
