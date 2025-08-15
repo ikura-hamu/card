@@ -21,8 +21,8 @@ jobs:
         run: |
           {
             echo 'GO_MOD_INFO=<<EOF'
-            echo $(go list -json=Module,Imports .)
-            echo EOF
+            go list -json=Module,Imports .
+            echo 'EOF'
           } >> "$GITHUB_ENV"
 
       - name: GitHub App token
