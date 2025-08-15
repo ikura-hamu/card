@@ -2,7 +2,6 @@ package tabs
 
 import (
 	"fmt"
-	"log"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -67,8 +66,8 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if msg, ok := msg.(merrors.Msg); ok {
-		log.Printf("error: %v", msg.Error())
+	if msg, ok := msg.(error); ok {
+		tea.Printf("error: %v", msg)
 		return tm, tea.Quit
 	}
 
@@ -86,10 +85,10 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for i, tab := range tm.tabs {
 			tab, cmd := tab.Update(contentSizeMsg)
 			cmds = append(cmds, cmd)
-			if tab, ok := tab.(Tab); ok {
-				tm.tabs[i] = tab
+			if t, ok := tab.(Tab); ok {
+				tm.tabs[i] = t
 			} else {
-				return tm, tea.Quit
+				return tm, merrors.NewCmd(fmt.Errorf("tab is not a valid Tab type: %T", tab))
 			}
 		}
 
@@ -99,10 +98,10 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// キーボードのイベントはactive tabにのみ送信
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		tab, cmd := tm.tabs[tm.activeTab].Update(msg)
-		if tab, ok := tab.(Tab); ok {
-			tm.tabs[tm.activeTab] = tab
+		if t, ok := tab.(Tab); ok {
+			tm.tabs[tm.activeTab] = t
 		} else {
-			return tm, tea.Quit // If a tab is not a valid Tab type, exit
+			return tm, merrors.NewCmd(fmt.Errorf("tab is not a valid Tab type: %T", tab))
 		}
 		return tm, cmd
 	}
@@ -111,10 +110,10 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	for i, tab := range tm.tabs {
 		tab, cmd := tab.Update(msg)
 		cmds = append(cmds, cmd)
-		if tab, ok := tab.(Tab); ok {
-			tm.tabs[i] = tab
+		if t, ok := tab.(Tab); ok {
+			tm.tabs[i] = t
 		} else {
-			return tm, tea.Quit // If a tab is not a valid Tab type, exit
+			return tm, merrors.NewCmd(fmt.Errorf("tab is not a valid Tab type: %T", tab))
 		}
 	}
 

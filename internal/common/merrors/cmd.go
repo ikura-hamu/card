@@ -6,6 +6,6 @@ import (
 
 func NewCmd(err error) func() tea.Msg {
 	return func() tea.Msg {
-		return New(err)
+		return err
 	}
 }

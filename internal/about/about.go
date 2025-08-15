@@ -15,20 +15,25 @@ type readMeMsg struct {
 	content string
 }
 
-func fetchReadme() tea.Msg {
+func fetchReadme() (msg tea.Msg) {
 	resp, err := http.Get("https://raw.githubusercontent.com/ikura-hamu/ikura-hamu/refs/heads/main/README.md")
 	if err != nil {
-		return merrors.New(fmt.Errorf("fetch readme: %w", err))
+		return fmt.Errorf("fetch readme: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			msg = fmt.Errorf("close resp.Body: %w", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return merrors.New(fmt.Errorf("fetch readme: %w", err))
+		return fmt.Errorf("fetch readme: %w", err)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return merrors.New(fmt.Errorf("read readme: %w", err))
+		return fmt.Errorf("read readme: %w", err)
 	}
 
 	return readMeMsg{content: string(body)}
@@ -59,7 +64,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case readMeMsg:
 		md, err := glamour.Render(msg.content, "dark")
 		if err != nil {
-			return m, tea.Quit
+			return m, merrors.NewCmd(fmt.Errorf("render markdown: %w", err))
 		}
 		m.mdViewport.SetContent(md)
 	case tea.WindowSizeMsg:
@@ -70,8 +75,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.mdViewport.Width = msg.Width
 			m.mdViewport.Height = msg.Height
 		}
-	case merrors.Msg:
-		return m, tea.Quit // Handle error appropriately in a real application
 	}
 
 	var cmd tea.Cmd

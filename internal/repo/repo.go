@@ -91,7 +91,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		content := fmt.Sprintf("Rate limit exceeded. Please wait until %s to try again.", msg.resetAt.Format(time.DateTime))
 		md, err := glamour.Render(content, "dark")
 		if err != nil {
-			return m, tea.Quit
+			return m, merrors.NewCmd(fmt.Errorf("render markdown: %w", err))
 		}
 		m.reposViewport.SetContent(md)
 	case tea.WindowSizeMsg:
@@ -112,8 +112,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.reposViewport.Height = mdTextViewSize.Height
 			m.repoList.SetSize(listSize.Width, listSize.Height)
 		}
-	case merrors.Msg:
-		return m, tea.Quit // Handle error appropriately in a real application
 	}
 
 	var cmd tea.Cmd

@@ -9,7 +9,6 @@ import (
 
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
 	tea "github.com/charmbracelet/bubbletea"
-	"go.ikura-hamu.work/card/internal/common/merrors"
 	"go.ikura-hamu.work/card/internal/common/size"
 )
 
@@ -27,27 +26,27 @@ type imageFetchedMsg struct {
 func fetchImage() (msg tea.Msg) {
 	resp, err := http.Get(iconURL)
 	if err != nil {
-		return merrors.New(fmt.Errorf("fetch icon: %w", err))
+		return fmt.Errorf("fetch icon: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			msg = merrors.New(fmt.Errorf("close resp.Body: %w", err))
+			msg = fmt.Errorf("close resp.Body: %w", err)
 		}
 	}()
 
 	f, err := os.CreateTemp("", TempFilePrefix())
 	if err != nil {
-		return merrors.New(fmt.Errorf("create temp file: %w", err))
+		return fmt.Errorf("create temp file: %w", err)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			msg = merrors.New(fmt.Errorf("close temp file: %w", err))
+			msg = fmt.Errorf("close temp file: %w", err)
 		}
 	}()
 
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
-		return merrors.New(fmt.Errorf("copy resp.Body to file: %w", err))
+		return fmt.Errorf("copy resp.Body to file: %w", err)
 	}
 
 	return imageFetchedMsg{filePath: f.Name()}

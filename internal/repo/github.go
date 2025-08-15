@@ -10,7 +10,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/google/go-github/v73/github"
-	"go.ikura-hamu.work/card/internal/common/merrors"
 )
 
 type reposRateLimitMsg struct {
@@ -29,7 +28,7 @@ func fetchRepositories() tea.Msg {
 		return reposRateLimitMsg{resetAt: re.Rate.Reset.Time}
 	}
 	if err != nil {
-		return merrors.New(fmt.Errorf("fetch user: %w", err))
+		return fmt.Errorf("fetch user: %w", err)
 	}
 
 	repos, _, err := client.Repositories.ListByUser(ctx, githubUserName, &github.RepositoryListByUserOptions{
@@ -43,7 +42,7 @@ func fetchRepositories() tea.Msg {
 		return reposRateLimitMsg{resetAt: re.Rate.Reset.Time}
 	}
 	if err != nil {
-		return merrors.New(fmt.Errorf("fetch repositories: %w", err))
+		return fmt.Errorf("fetch repositories: %w", err)
 	}
 
 	repoList := make([]repo, 0, len(repos))
