@@ -26,7 +26,7 @@ jobs:
           repositories: "go.ikura-hamu.work"
 
       - name: notify
-        uses: ikura-hamu/go-import-pages/notify@v0.1.0
+        uses: ikura-hamu/go-import-pages/notify@v0.1.1
         with:
           owner: ikura-hamu
           repo_name: go.ikura-hamu.work
