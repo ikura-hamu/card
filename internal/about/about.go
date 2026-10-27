@@ -8,8 +8,8 @@ import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/glamour/v2"
 	"go.ikura-hamu.work/card/internal/common/merrors"
+	"go.ikura-hamu.work/card/internal/common/theme"
 )
 
 type readMeMsg struct {
@@ -63,7 +63,7 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case readMeMsg:
-		md, err := glamour.Render(msg.content, "dark")
+		md, err := theme.RenderMarkdown(msg.content, 80)
 		if err != nil {
 			return m, merrors.NewCmd(fmt.Errorf("render markdown: %w", err))
 		}

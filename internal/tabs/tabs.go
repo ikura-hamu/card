@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"go.ikura-hamu.work/card/internal/common/merrors"
 	"go.ikura-hamu.work/card/internal/common/size"
+	"go.ikura-hamu.work/card/internal/common/theme"
 )
 
 type Tab interface {
@@ -198,32 +199,34 @@ func (tm TabsManager) View() tea.View {
 
 	result := tea.NewView(view)
 	result.AltScreen = true
+	result.BackgroundColor = lipgloss.Color(theme.Background)
 	return result
 }
 
 var (
 	activeTabStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder(), true, true, false, true).
-			BorderForeground(lipgloss.Color("205")).
+			BorderForeground(lipgloss.Color(theme.Primary)).
 			Bold(true).
 			Padding(0, 1).
-			Background(lipgloss.Color("240")).
-			Foreground(lipgloss.Color("white")).
+			Background(lipgloss.Color(theme.Primary)).
+			Foreground(lipgloss.Color(theme.Inverse)).
 			Margin(0, 1).
 			Align(lipgloss.Center)
 	inactiveTabStyle = lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder(), true, true, false, true).
-				BorderForeground(lipgloss.Color("240")).
-				Background(lipgloss.Color("white")).
-				Foreground(lipgloss.Color("black")).
+				BorderForeground(lipgloss.Color(theme.Secondary)).
+				Background(lipgloss.Color(theme.Background)).
+				Foreground(lipgloss.Color(theme.Text)).
 				Margin(0, 1).
 				Align(lipgloss.Center)
 	tabHeaderStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color(theme.Background)).
 			Margin(0, 1)
 	contentStyle = lipgloss.NewStyle().
 			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("240")).
-			Background(lipgloss.Color("white")).
-			Foreground(lipgloss.Color("black")).
+			BorderForeground(lipgloss.Color(theme.Secondary)).
+			Background(lipgloss.Color(theme.Background)).
+			Foreground(lipgloss.Color(theme.Text)).
 			Align(lipgloss.Left)
 )

@@ -4,6 +4,7 @@ import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
+	"go.ikura-hamu.work/card/internal/common/theme"
 )
 
 type CustomHelpTab interface {
@@ -49,6 +50,7 @@ func (tm TabsManager) renderHelp() string {
 	if t, ok := tm.tabs[tm.activeTab].(CustomHelpTab); ok {
 		helpModel = t.Help()
 	}
+	helpModel.Styles = theme.HelpStyles()
 	helpModel.SetWidth(tm.size.Width)
 	return lipgloss.NewStyle().MaxWidth(tm.size.Width).Render(helpModel.View(tm.keyMap))
 }

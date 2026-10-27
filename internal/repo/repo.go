@@ -10,11 +10,11 @@ import (
 	"charm.land/bubbles/v2/list"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/glamour/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/cli/browser"
 	"go.ikura-hamu.work/card/internal/common/merrors"
 	"go.ikura-hamu.work/card/internal/common/size"
+	"go.ikura-hamu.work/card/internal/common/theme"
 )
 
 type repo struct {
@@ -45,10 +45,11 @@ type Model struct {
 }
 
 func NewModel() Model {
-	repoList := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
+	repoList := list.New([]list.Item{}, themedDelegate(), 0, 0)
 	repoList.AdditionalFullHelpKeys = additionalListKeyBindings
 	repoList.AdditionalShortHelpKeys = additionalListKeyBindings
 	repoList.Title = "Repositories"
+	styleRepositoryList(&repoList)
 	repoList.SetShowHelp(false)
 
 	reposViewport := viewport.New()
@@ -103,7 +104,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case reposRateLimitMsg:
 		content := fmt.Sprintf("Rate limit exceeded. Please wait until %s to try again.", msg.resetAt.Format(time.DateTime))
-		md, err := glamour.Render(content, "dark")
+		md, err := theme.RenderMarkdown(content, 80)
 		if err != nil {
 			return m, merrors.NewCmd(fmt.Errorf("render markdown: %w", err))
 		}
@@ -152,14 +153,7 @@ func repoMarkdownView(r repo, width int) (string, error) {
 	b.WriteString(fmt.Sprintf("- Last pushed: %s\n", r.pushedAt.Format(time.RFC1123)))
 	b.WriteString(fmt.Sprintf("- Topics: %s\n", strings.Join(r.topics, ", ")))
 
-	renderer, err := glamour.NewTermRenderer(
-		glamour.WithStandardStyle("dark"),
-		glamour.WithWordWrap(max(1, width)),
-	)
-	if err != nil {
-		return "", fmt.Errorf("create markdown renderer: %w", err)
-	}
-	md, err := renderer.Render(b.String())
+	md, err := theme.RenderMarkdown(b.String(), width)
 	if err != nil {
 		return "", fmt.Errorf("render markdown: %w", err)
 	}
@@ -206,5 +200,6 @@ func listContainerStyle(cs size.Size) lipgloss.Style {
 var (
 	listContainerBaseStyle = lipgloss.NewStyle()
 	mdContainerStyle       = lipgloss.NewStyle().
-				Border(lipgloss.ASCIIBorder())
+				Border(lipgloss.ASCIIBorder()).
+				BorderForeground(lipgloss.Color(theme.Secondary))
 )
