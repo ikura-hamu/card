@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"charm.land/bubbles/v2/help"
+	tea "charm.land/bubbletea/v2"
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
-	"github.com/charmbracelet/bubbles/help"
-	tea "github.com/charmbracelet/bubbletea"
 	"go.ikura-hamu.work/card/internal/common/size"
 )
 
@@ -74,22 +74,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	flags := aic_package.DefaultFlags()
 
 	flags.Height = m.size.Height
 	flags.Colored = true
 
 	if m.filePath == "" {
-		return "Loading icon..."
+		return tea.NewView("Loading icon...")
 	}
 
 	icon, err := aic_package.Convert(m.filePath, flags)
 	if err != nil {
-		return fmt.Errorf("failed to convert icon: %w", err).Error()
+		return tea.NewView(fmt.Errorf("failed to convert icon: %w", err).Error())
 	}
 
-	return icon
+	return tea.NewView(icon)
 }
 
 // TempFilePrefix returns the prefix used for icon temporary files for this process.

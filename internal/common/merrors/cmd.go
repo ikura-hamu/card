@@ -1,7 +1,7 @@
 package merrors
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func NewCmd(err error) func() tea.Msg {

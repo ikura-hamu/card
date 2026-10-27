@@ -5,10 +5,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/glamour/v2"
 	"go.ikura-hamu.work/card/internal/common/merrors"
 )
 
@@ -48,7 +48,7 @@ type Model struct {
 func NewModel() Model {
 	return Model{
 		ready:      false,
-		mdViewport: viewport.New(0, 0),
+		mdViewport: viewport.New(),
 	}
 }
 
@@ -70,11 +70,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.mdViewport.SetContent(md)
 	case tea.WindowSizeMsg:
 		if !m.ready {
-			m.mdViewport = viewport.New(msg.Width, msg.Height)
+			m.mdViewport = viewport.New(
+				viewport.WithWidth(msg.Width),
+				viewport.WithHeight(msg.Height),
+			)
 			m.ready = true
 		} else {
-			m.mdViewport.Width = msg.Width
-			m.mdViewport.Height = msg.Height
+			m.mdViewport.SetWidth(msg.Width)
+			m.mdViewport.SetHeight(msg.Height)
 		}
 	}
 
@@ -84,11 +87,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	if !m.ready {
-		return "Loading readme..."
+		return tea.NewView("Loading readme...")
 	}
-	return m.mdViewport.View()
+	return tea.NewView(m.mdViewport.View())
 }
 
 func (m Model) KeyMap() help.KeyMap {

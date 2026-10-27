@@ -1,8 +1,9 @@
 package tabs
 
 import (
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	"charm.land/lipgloss/v2"
 )
 
 type CustomHelpTab interface {
@@ -44,8 +45,10 @@ func (k tabsKeyMap) FullHelp() [][]key.Binding {
 }
 
 func (tm TabsManager) renderHelp() string {
+	helpModel := tm.help
 	if t, ok := tm.tabs[tm.activeTab].(CustomHelpTab); ok {
-		return t.Help().View(tm.keyMap)
+		helpModel = t.Help()
 	}
-	return tm.help.View(tm.keyMap)
+	helpModel.SetWidth(tm.size.Width)
+	return lipgloss.NewStyle().MaxWidth(tm.size.Width).Render(helpModel.View(tm.keyMap))
 }

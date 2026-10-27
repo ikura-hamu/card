@@ -3,10 +3,10 @@ package tabs
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"go.ikura-hamu.work/card/internal/common/merrors"
 	"go.ikura-hamu.work/card/internal/common/size"
 )
@@ -66,7 +66,7 @@ func (tm *TabsManager) changeActiveTab(idx int) {
 }
 
 func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if msg, ok := msg.(tea.KeyMsg); ok {
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch msg.String() {
 		case "ctrl+c":
 			return tm, tea.Quit
@@ -90,7 +90,7 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Height: contentHeight,
 		}
 
-		tm.help.Width = contentWidth
+		tm.help.SetWidth(contentWidth)
 
 		tm.size = size.Size{Width: contentWidth, Height: contentHeight}
 
@@ -111,7 +111,7 @@ func (tm TabsManager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// キーボードのイベントはactive tabにのみ送信
-	if msg, ok := msg.(tea.KeyMsg); ok {
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		tab, cmd := tm.tabs[tm.activeTab].Update(msg)
 		if t, ok := tab.(Tab); ok {
 			tm.tabs[tm.activeTab] = t
@@ -165,7 +165,10 @@ func (tm TabsManager) calculateContentSize(terminalWidth, terminalHeight int) (w
 	contentBorderHeight := lipgloss.Height(contentSample) - lipgloss.Height("sample")
 
 	// 利用可能なコンテンツエリアのサイズを計算
-	contentWidth := terminalWidth - contentBorderWidth
+	// Keep the last terminal column unused. Rendering into the final column can
+	// trigger an automatic line wrap, which shifts full-width pane layouts down
+	// by one row in Bubble Tea's cell renderer.
+	contentWidth := terminalWidth - contentBorderWidth - 1
 	contentHeight := terminalHeight - tabHeaderHeight - tabHelpHeight - contentBorderHeight
 
 	// 最小サイズを確保
@@ -179,15 +182,23 @@ func (tm TabsManager) calculateContentSize(terminalWidth, terminalHeight int) (w
 	return contentWidth, contentHeight
 }
 
-func (tm TabsManager) View() string {
+func (tm TabsManager) View() tea.View {
 	var view string
 
 	view += tm.renderTabHeaders()
-	view += contentStyle.Width(tm.size.Width).Height(tm.size.Height).
-		Render(tm.tabs[tm.activeTab].View())
+	// Lip Gloss v2 sizes include borders. Child tabs receive the inner size,
+	// so add the frame back here to avoid wrapping their rightmost columns.
+	view += contentStyle.
+		Width(tm.size.Width + contentStyle.GetHorizontalFrameSize()).
+		Height(tm.size.Height + contentStyle.GetVerticalFrameSize()).
+		MaxWidth(tm.size.Width + contentStyle.GetHorizontalFrameSize()).
+		MaxHeight(tm.size.Height + contentStyle.GetVerticalFrameSize()).
+		Render(tm.tabs[tm.activeTab].View().Content)
 	view += "\n" + tm.renderHelp()
 
-	return view
+	result := tea.NewView(view)
+	result.AltScreen = true
+	return result
 }
 
 var (

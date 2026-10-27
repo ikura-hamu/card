@@ -5,13 +5,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/glamour/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/cli/browser"
 	"go.ikura-hamu.work/card/internal/common/merrors"
 	"go.ikura-hamu.work/card/internal/common/size"
@@ -45,9 +45,19 @@ type Model struct {
 }
 
 func NewModel() Model {
+	repoList := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
+	repoList.AdditionalFullHelpKeys = additionalListKeyBindings
+	repoList.AdditionalShortHelpKeys = additionalListKeyBindings
+	repoList.Title = "Repositories"
+	repoList.SetShowHelp(false)
+
+	reposViewport := viewport.New()
+	reposViewport.SoftWrap = true
+
 	return Model{
 		ready:         false,
-		reposViewport: viewport.New(0, 0),
+		reposViewport: reposViewport,
+		repoList:      repoList,
 	}
 }
 
@@ -62,7 +72,7 @@ func (m Model) Init() tea.Cmd {
 func additionalListKeyBindings() []key.Binding {
 	return []key.Binding{
 		key.NewBinding(
-			key.WithKeys("o", tea.KeyEnter.String()),
+			key.WithKeys("o", "enter"),
 			key.WithHelp("o", "open in browser"),
 		),
 	}
@@ -72,10 +82,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := make([]tea.Cmd, 0, 3)
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
-		case tea.KeyEnter.String(), "o":
-			currentRepo := m.repoList.SelectedItem().(repo)
+		case "enter", "o":
+			currentRepo, ok := m.repoList.SelectedItem().(repo)
+			if !ok {
+				break
+			}
 			err := browser.OpenURL(currentRepo.url)
 			if err != nil {
 				return m, merrors.NewCmd(fmt.Errorf("open repository URL: %w", err))
@@ -99,21 +112,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.size = size.Size{Width: msg.Width, Height: msg.Height}
 		listSize := repoListSize(m.size)
 		mdTextViewSize := repoMDTextViewSize(m.size)
-		if !m.ready {
-			m.reposViewport = viewport.New(mdTextViewSize.Width, mdTextViewSize.Height)
-
-			m.repoList = list.New([]list.Item{}, list.NewDefaultDelegate(), listSize.Width, listSize.Height)
-			m.repoList.AdditionalFullHelpKeys = additionalListKeyBindings
-			m.repoList.AdditionalShortHelpKeys = additionalListKeyBindings
-			m.repoList.Title = "Repositories"
-			m.repoList.SetShowHelp(false)
-
-			m.ready = true
-		} else {
-			m.reposViewport.Width = mdTextViewSize.Width
-			m.reposViewport.Height = mdTextViewSize.Height
-			m.repoList.SetSize(listSize.Width, listSize.Height)
-		}
+		m.reposViewport.SetWidth(mdTextViewSize.Width)
+		m.reposViewport.SetHeight(mdTextViewSize.Height)
+		m.repoList.SetSize(listSize.Width, listSize.Height)
+		m.ready = true
 	}
 
 	var cmd tea.Cmd
@@ -134,13 +136,14 @@ func repoListSize(s size.Size) size.Size {
 
 func repoMDTextViewSize(s size.Size) size.Size {
 	x, y := mdContainerStyle.GetFrameSize()
+	listWidth := repoListSize(s).Width
 	return size.Size{
-		Width:  s.Width/2 - x,
-		Height: s.Height - y,
+		Width:  max(0, s.Width-listWidth-x),
+		Height: max(0, s.Height-y),
 	}
 }
 
-func repoMarkdownView(r repo) (string, error) {
+func repoMarkdownView(r repo, width int) (string, error) {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("## %s\n\n", r.Title()))
 	b.WriteString(fmt.Sprintf("%s\n\n", r.Description()))
@@ -149,32 +152,39 @@ func repoMarkdownView(r repo) (string, error) {
 	b.WriteString(fmt.Sprintf("- Last pushed: %s\n", r.pushedAt.Format(time.RFC1123)))
 	b.WriteString(fmt.Sprintf("- Topics: %s\n", strings.Join(r.topics, ", ")))
 
-	md, err := glamour.Render(b.String(), "dark")
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithStandardStyle("dark"),
+		glamour.WithWordWrap(max(1, width)),
+	)
+	if err != nil {
+		return "", fmt.Errorf("create markdown renderer: %w", err)
+	}
+	md, err := renderer.Render(b.String())
 	if err != nil {
 		return "", fmt.Errorf("render markdown: %w", err)
 	}
 	return md, nil
 }
 
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	if !m.ready {
-		return "Loading repositories..."
+		return tea.NewView("Loading repositories...")
 	}
 
 	currentRepo, ok := m.repoList.SelectedItem().(repo)
 	if !ok {
-		return "No repository selected."
+		return tea.NewView("No repository selected.")
 	}
 
-	repoMD, err := repoMarkdownView(currentRepo)
+	repoMD, err := repoMarkdownView(currentRepo, m.reposViewport.Width())
 	if err != nil {
-		return fmt.Sprintf("Error rendering repository details: %v", err)
+		return tea.NewView(fmt.Sprintf("Error rendering repository details: %v", err))
 	}
 	m.reposViewport.SetContent(repoMD)
 
-	return lipgloss.JoinHorizontal(lipgloss.Top,
+	return tea.NewView(lipgloss.JoinHorizontal(lipgloss.Top,
 		listContainerStyle(repoListSize(m.size)).Render(m.repoList.View()),
-		mdContainerStyle.Render(m.reposViewport.View()))
+		mdContainerStyle.Render(m.reposViewport.View())))
 }
 
 func (m Model) KeyMap() help.KeyMap {
@@ -186,7 +196,11 @@ func (m Model) Help() help.Model {
 }
 
 func listContainerStyle(cs size.Size) lipgloss.Style {
-	return listContainerBaseStyle.Width(cs.Width).Height(cs.Height)
+	return listContainerBaseStyle.
+		Width(cs.Width).
+		Height(cs.Height).
+		MaxWidth(cs.Width).
+		MaxHeight(cs.Height)
 }
 
 var (

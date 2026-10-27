@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"go.ikura-hamu.work/card/internal/about"
 	"go.ikura-hamu.work/card/internal/icon"
 	"go.ikura-hamu.work/card/internal/repo"
